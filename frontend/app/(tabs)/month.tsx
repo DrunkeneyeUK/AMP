@@ -15,14 +15,20 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import dayjs from "dayjs";
 
-import { colors, spacing, radius, typography, shadows, getCategoryMeta } from "@/src/constants/theme";
+import { spacing, radius, typography, shadows, getCategoryMeta } from "@/src/constants/theme";
 import { api, EventItem, TaskItem } from "@/src/lib/api";
 import { buildMonthGrid, monthRangeISO, toISODate, formatTime } from "@/src/lib/date";
+import { useAuth } from "@/src/auth/AuthContext";
+import { useTheme } from "@/src/theme/ThemeContext";
+import { useThemedStyles } from "@/src/theme/useThemedStyles";
 
 const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
 export default function MonthScreen() {
   const router = useRouter();
+  const { company } = useAuth();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [month, setMonth] = useState(dayjs());
   const [events, setEvents] = useState<EventItem[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -73,6 +79,8 @@ export default function MonthScreen() {
     arr.push(t);
     tasksByDay.set(d, arr);
   });
+
+  const catList = company?.categories;
 
   const openDay = async (iso: string) => {
     Haptics.selectionAsync();
@@ -139,7 +147,7 @@ export default function MonthScreen() {
             const total = dayEvents.length + dayTasks.length;
             const dots = dayEvents
               .slice(0, 3)
-              .map((e) => getCategoryMeta(e.category).color);
+              .map((e) => getCategoryMeta(e.category, catList).color);
 
             return (
               <Pressable
@@ -210,7 +218,7 @@ export default function MonthScreen() {
               ) : (
                 <>
                   {sheetEvents.map((e) => {
-                    const m = getCategoryMeta(e.category);
+                    const m = getCategoryMeta(e.category, catList);
                     return (
                       <Pressable
                         key={e.id}
@@ -231,7 +239,7 @@ export default function MonthScreen() {
                     );
                   })}
                   {sheetTasks.map((t) => {
-                    const m = getCategoryMeta(t.category);
+                    const m = getCategoryMeta(t.category, catList);
                     return (
                       <Pressable
                         key={t.id}
@@ -262,7 +270,7 @@ export default function MonthScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
   header: {
     flexDirection: "row",

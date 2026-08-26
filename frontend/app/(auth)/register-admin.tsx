@@ -16,14 +16,18 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 
-import { colors, spacing, radius, typography, shadows } from "@/src/constants/theme";
+import { spacing, radius, typography, shadows } from "@/src/constants/theme";
 import { useAuth } from "@/src/auth/AuthContext";
+import { useTheme } from "@/src/theme/ThemeContext";
+import { useThemedStyles } from "@/src/theme/useThemedStyles";
 
 type Visibility = "shared" | "private";
 
 export default function RegisterAdminScreen() {
   const router = useRouter();
   const { signUpAdmin, refresh } = useAuth();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const [step, setStep] = useState<"form" | "invite">("form");
   const [companyName, setCompanyName] = useState("");
@@ -252,6 +256,7 @@ export default function RegisterAdminScreen() {
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
@@ -260,7 +265,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
   header: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
   hTitle: { fontSize: typography.xl, fontWeight: "800", color: colors.onSurface },
@@ -344,7 +349,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 6,
     alignItems: "center",
-    backgroundColor: "#FFD7D4",
+    backgroundColor: colors.errorBg,
     padding: spacing.md,
     borderRadius: radius.md,
     marginBottom: spacing.md,

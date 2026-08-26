@@ -1,0 +1,45 @@
+{
+  "summary": "Iteration 4 — DaySync category CRUD + dark mode. Backend 36/36 pytest passed (15 new category tests + 21 regression auth/tenant/events/tasks/logo). New tests cover defaults on fresh company (5 seeded: work/meeting/deadline/personal/focus), slug generation (Client Call -> client-call, dedupe -> client-call-2), auto-tinted bg from hex, admin CRUD, employee 403 on POST/PATCH/DELETE, employee can GET, /auth/me + /api/company include categories, PATCH auto-refreshes bg on color change, DELETE last remaining returns 400, missing key -> 404. Frontend UI verified end-to-end on mobile viewport (390x844): Profile Appearance section renders 3 buttons with testIDs theme-light/theme-dark/theme-system. Tapping Dark switches whole app to dark theme (Profile, Admin, tabs all render on dark bg), persisted at localStorage['daysync.theme_mode']='dark' and survives page reload. Admin 'Event types' section lists all 5 default categories with pencil + trash icons; Add event type flow (cat-new -> cat-new-label -> cat-new-save) created 'sprint' successfully; inline edit via cat-edit-{key} + cat-save-{key} updated the label; cat-delete-{key} removed it. Both features are working as designed.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "server.py startup/shutdown", "issue": "Uses deprecated @app.on_event hooks; migrate to FastAPI lifespan (non-blocking)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Global (dev only)", "issues": ["React Native Web deprecation warnings: 'shadow*' style props (use boxShadow), props.pointerEvents (use style.pointerEvents). Non-blocking."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_daysync_categories.py",
+    "/app/backend/tests/test_daysync_auth.py",
+    "/app/test_reports/pytest/pytest_categories.xml",
+    "/app/test_reports/pytest/pytest_auth.xml"
+  ],
+  "action_items": [
+    "None blocking. Optional cleanup: migrate to FastAPI lifespan; silence RN-Web shadow*/pointerEvents warnings."
+  ],
+  "critical_code_review_comments": [
+    "server.py:220-226 default categories seeded per-company in register_company via 'categories': [dict(c) for c in DEFAULT_CATEGORIES] — good (deep copies avoid shared-reference mutations).",
+    "server.py:471-477 slug generation lower-cases + non-alnum -> '-' + de-duplicates with -2/-3 suffix; correctly handles 'Client Call' -> 'client-call' and repeat -> 'client-call-2'.",
+    "server.py:498-511 PATCH auto-refreshes tinted bg via _hex_to_bg when color changes but bg is not explicitly provided — matches product intent.",
+    "server.py:521-522 DELETE guard 'len(cats) <= 1' correctly returns 400 with 'At least one category is required' preventing empty state.",
+    "server.py:288 public_company includes 'categories': c.get('categories', DEFAULT_CATEGORIES) so /auth/me and /api/company both expose the current list to the frontend.",
+    "ThemeContext uses storage key 'daysync.theme_mode' (verified from localStorage after tapping Dark) and re-loads on app boot — persistence works across reloads.",
+    "Category endpoints correctly gated: GET uses get_current_user (employees allowed), POST/PATCH/DELETE use require_admin (employees get 403) — verified by tests."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_daysync_categories.py (new)",
+    "/app/test_reports/iteration_4.json (new)"
+  ],
+  "success_rate": {"backend": "100% (36/36 across categories + auth suites)", "frontend": "100% for tested flows (dark mode toggle + persistence + reload; admin category add/edit/delete)"},
+  "seed_data_creation": "Tests create TEST_ prefixed companies+admins+employees each run (TEST_CatCo_<ts>, TEST_LastCat_<ts>). Frontend UI test created uiadmin_<ts>@acme.co under TEST_UICat_<ts>. All test data isolated per company.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Category CRUD: GET /api/company/categories (all roles), POST/PATCH/DELETE /api/company/categories[/{key}] (admin only). Slugs auto-generated from label with '-2','-3' dedupe suffix. bg auto-computed from color via _hex_to_bg (85% white blend). Last-remaining delete returns 400 'At least one category is required'. Dark mode: storage key 'daysync.theme_mode' (values 'light'|'dark'|'system'); testIDs theme-light/theme-dark/theme-system on Profile > Appearance. Admin screen testIDs: cat-new (button), cat-new-label (input), cat-new-save; per-row cat-edit-{key}, cat-delete-{key}, cat-edit-label-{key}, cat-edit-color-{key}, cat-save-{key}. Run tests with `EXPO_PUBLIC_BACKEND_URL=https://gpt-cross-platform.preview.emergentagent.com pytest /app/backend/tests/ -v`.",
+  "rca_of_issue": "N/A — no bugs found; both features fully functional."
+}

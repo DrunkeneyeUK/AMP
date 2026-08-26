@@ -14,12 +14,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
-import { colors, spacing, radius, typography, shadows } from "@/src/constants/theme";
+import { spacing, radius, typography, shadows } from "@/src/constants/theme";
 import { useAuth } from "@/src/auth/AuthContext";
+import { useTheme } from "@/src/theme/ThemeContext";
+import { useThemedStyles } from "@/src/theme/useThemedStyles";
 
 export default function JoinScreen() {
   const router = useRouter();
   const { signUpEmployee } = useAuth();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [inviteCode, setInviteCode] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -163,6 +167,7 @@ export default function JoinScreen() {
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
@@ -171,7 +176,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
   header: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
   iconBtn: {
@@ -240,7 +245,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 6,
     alignItems: "center",
-    backgroundColor: "#FFD7D4",
+    backgroundColor: colors.errorBg,
     padding: spacing.md,
     borderRadius: radius.md,
     marginBottom: spacing.md,

@@ -1,4 +1,34 @@
-export const colors = {
+export type Palette = {
+  surface: string;
+  onSurface: string;
+  surfaceSecondary: string;
+  onSurfaceSecondary: string;
+  surfaceTertiary: string;
+  onSurfaceTertiary: string;
+  surfaceInverse: string;
+  onSurfaceInverse: string;
+  brand: string;
+  brandPrimary: string;
+  onBrandPrimary: string;
+  brandSecondary: string;
+  onBrandSecondary: string;
+  brandTertiary: string;
+  onBrandTertiary: string;
+  success: string;
+  onSuccess: string;
+  warning: string;
+  onWarning: string;
+  error: string;
+  onError: string;
+  info: string;
+  onInfo: string;
+  border: string;
+  borderStrong: string;
+  divider: string;
+  errorBg: string;
+};
+
+export const lightPalette: Palette = {
   surface: "#FCFAF8",
   onSurface: "#1C1B1A",
   surfaceSecondary: "#F2EFEB",
@@ -25,7 +55,41 @@ export const colors = {
   border: "#E0DDD8",
   borderStrong: "#C7C3BD",
   divider: "#EBE8E4",
+  errorBg: "#FFD7D4",
 };
+
+export const darkPalette: Palette = {
+  surface: "#141312",
+  onSurface: "#F2EFEB",
+  surfaceSecondary: "#1F1D1C",
+  onSurfaceSecondary: "#A6A29E",
+  surfaceTertiary: "#2E2B29",
+  onSurfaceTertiary: "#8C8985",
+  surfaceInverse: "#FCFAF8",
+  onSurfaceInverse: "#1C1B1A",
+  brand: "#FF8578",
+  brandPrimary: "#FF8578",
+  onBrandPrimary: "#2E0E0A",
+  brandSecondary: "#521812",
+  onBrandSecondary: "#FFD4CF",
+  brandTertiary: "#330F0B",
+  onBrandTertiary: "#FFAEA6",
+  success: "#30D158",
+  onSuccess: "#000000",
+  warning: "#FFD60A",
+  onWarning: "#000000",
+  error: "#FF453A",
+  onError: "#000000",
+  info: "#64D2FF",
+  onInfo: "#000000",
+  border: "#2E2B29",
+  borderStrong: "#4A4642",
+  divider: "#1F1D1C",
+  errorBg: "#3B1815",
+};
+
+// Legacy static export (light palette) — new code should use useTheme()
+export const colors = lightPalette;
 
 export const spacing = {
   xs: 4,
@@ -72,19 +136,24 @@ export const shadows = {
   },
 };
 
-// Category color map
-export const CATEGORIES: {
+export type CategoryDef = {
   key: string;
   label: string;
   color: string;
   bg: string;
-}[] = [
+};
+
+// Fallback defaults; the real list comes from the company config.
+export const DEFAULT_CATEGORIES: CategoryDef[] = [
   { key: "work", label: "Work", color: "#FF6B5C", bg: "#FFDED9" },
   { key: "meeting", label: "Meeting", color: "#32ADE6", bg: "#D6EEFA" },
   { key: "deadline", label: "Deadline", color: "#FF453A", bg: "#FFD7D4" },
   { key: "personal", label: "Personal", color: "#34C759", bg: "#D6F5DE" },
   { key: "focus", label: "Focus", color: "#FFB340", bg: "#FFEBCC" },
 ];
+
+// Legacy: kept so old imports don't crash. Prefer useCategories() from AuthContext.
+export const CATEGORIES = DEFAULT_CATEGORIES;
 
 export const PRIORITIES: {
   key: "low" | "medium" | "high";
@@ -96,6 +165,27 @@ export const PRIORITIES: {
   { key: "high", label: "High", color: "#FF453A" },
 ];
 
-export function getCategoryMeta(key: string) {
-  return CATEGORIES.find((c) => c.key === key) ?? CATEGORIES[0];
+export function getCategoryMeta(key: string, categories?: CategoryDef[]) {
+  const list = categories && categories.length ? categories : DEFAULT_CATEGORIES;
+  return list.find((c) => c.key === key) ?? list[0];
+}
+
+// Utility: convert hex to a tinted background for dark backgrounds too.
+export function tintBg(hex: string, isDark = false): string {
+  const h = hex.replace("#", "");
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  if (isDark) {
+    // dark tint at 20% saturation
+    const rr = Math.round(r * 0.25 + 20 * 0.75);
+    const gg = Math.round(g * 0.25 + 20 * 0.75);
+    const bb = Math.round(b * 0.25 + 20 * 0.75);
+    return `#${rr.toString(16).padStart(2, "0")}${gg.toString(16).padStart(2, "0")}${bb.toString(16).padStart(2, "0")}`;
+  }
+  const rr = Math.round(r * 0.15 + 255 * 0.85);
+  const gg = Math.round(g * 0.15 + 255 * 0.85);
+  const bb = Math.round(b * 0.15 + 255 * 0.85);
+  return `#${rr.toString(16).padStart(2, "0")}${gg.toString(16).padStart(2, "0")}${bb.toString(16).padStart(2, "0")}`;
 }

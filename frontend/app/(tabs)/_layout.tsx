@@ -2,12 +2,14 @@ import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { View, StyleSheet, Platform } from "react-native";
 import { BlurView } from "expo-blur";
-import { colors } from "@/src/constants/theme";
+import { useTheme } from "@/src/theme/ThemeContext";
 import { useAuth } from "@/src/auth/AuthContext";
 
 export default function TabsLayout() {
   const { company } = useAuth();
+  const { colors, isDark } = useTheme();
   const brand = company?.brand_color ?? colors.brandPrimary;
+  const overlay = isDark ? "rgba(20, 19, 18, 0.85)" : "rgba(252, 250, 248, 0.85)";
 
   return (
     <Tabs
@@ -32,14 +34,14 @@ export default function TabsLayout() {
           <View style={StyleSheet.absoluteFill}>
             <BlurView
               intensity={Platform.OS === "ios" ? 80 : 100}
-              tint="light"
+              tint={isDark ? "dark" : "light"}
               style={StyleSheet.absoluteFill}
             />
             <View
               style={[
                 StyleSheet.absoluteFill,
                 {
-                  backgroundColor: "rgba(252, 250, 248, 0.85)",
+                  backgroundColor: overlay,
                   borderTopWidth: 1,
                   borderTopColor: colors.divider,
                 },
@@ -54,11 +56,7 @@ export default function TabsLayout() {
         options={{
           title: "Today",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "sunny" : "sunny-outline"}
-              size={24}
-              color={color}
-            />
+            <Ionicons name={focused ? "sunny" : "sunny-outline"} size={24} color={color} />
           ),
         }}
       />
@@ -67,11 +65,7 @@ export default function TabsLayout() {
         options={{
           title: "Month",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "calendar" : "calendar-outline"}
-              size={24}
-              color={color}
-            />
+            <Ionicons name={focused ? "calendar" : "calendar-outline"} size={24} color={color} />
           ),
         }}
       />
@@ -93,11 +87,7 @@ export default function TabsLayout() {
         options={{
           title: "Profile",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "person-circle" : "person-circle-outline"}
-              size={24}
-              color={color}
-            />
+            <Ionicons name={focused ? "person-circle" : "person-circle-outline"} size={24} color={color} />
           ),
         }}
       />

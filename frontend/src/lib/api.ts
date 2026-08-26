@@ -39,6 +39,13 @@ export type TaskItem = {
   updated_at: string;
 };
 
+export type CategoryDef = {
+  key: string;
+  label: string;
+  color: string;
+  bg: string;
+};
+
 export type CompanyInfo = {
   id: string;
   name: string;
@@ -46,6 +53,7 @@ export type CompanyInfo = {
   brand_color: string;
   visibility_mode: "shared" | "private";
   invite_code?: string;
+  categories?: CategoryDef[];
 };
 
 export type UserInfo = {
@@ -125,6 +133,21 @@ export const api = {
     }),
   rotateInvite: () =>
     req<{ invite_code: string }>("/company/rotate-invite", { method: "POST" }),
+
+  // Categories
+  listCategories: () => req<CategoryDef[]>("/company/categories"),
+  createCategory: (body: { label: string; color: string; bg?: string }) =>
+    req<CategoryDef>("/company/categories", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateCategory: (key: string, body: Partial<CategoryDef>) =>
+    req<CategoryDef>(`/company/categories/${key}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteCategory: (key: string) =>
+    req<{ ok: boolean }>(`/company/categories/${key}`, { method: "DELETE" }),
   uploadLogo: async (fileUri: string, mime: string) => {
     const token = await storage.secureGet(TOKEN_KEY, "");
     const form = new FormData();

@@ -8,7 +8,7 @@ import { StatusBar } from "expo-status-bar";
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { AuthProvider, useAuth } from "@/src/auth/AuthContext";
-import { colors } from "@/src/constants/theme";
+import { ThemeProvider, useTheme } from "@/src/theme/ThemeContext";
 
 LogBox.ignoreAllLogs(true);
 
@@ -16,6 +16,7 @@ SplashScreen.preventAutoHideAsync();
 
 function RouteGuard() {
   const { user, loading } = useAuth();
+  const { colors, isDark } = useTheme();
   const router = useRouter();
   const segments = useSegments();
 
@@ -41,14 +42,17 @@ function RouteGuard() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surface } }}>
-      <Stack.Screen name="(auth)" />
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="create" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
-      <Stack.Screen name="event/[id]" options={{ animation: "slide_from_right" }} />
-      <Stack.Screen name="task/[id]" options={{ animation: "slide_from_right" }} />
-      <Stack.Screen name="admin/index" options={{ animation: "slide_from_right" }} />
-    </Stack>
+    <>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surface } }}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="create" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
+        <Stack.Screen name="event/[id]" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="task/[id]" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="admin/index" options={{ animation: "slide_from_right" }} />
+      </Stack>
+    </>
   );
 }
 
@@ -66,10 +70,11 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar style="dark" />
-        <AuthProvider>
-          <RouteGuard />
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <RouteGuard />
+          </AuthProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

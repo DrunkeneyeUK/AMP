@@ -14,12 +14,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
-import { colors, spacing, radius, typography, shadows } from "@/src/constants/theme";
+import { spacing, radius, typography, shadows } from "@/src/constants/theme";
 import { useAuth } from "@/src/auth/AuthContext";
+import { useTheme } from "@/src/theme/ThemeContext";
+import { useThemedStyles } from "@/src/theme/useThemedStyles";
 
 export default function LoginScreen() {
   const router = useRouter();
   const { signIn } = useAuth();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -148,7 +152,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
   header: {
     paddingHorizontal: spacing.lg,
@@ -221,7 +225,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 6,
     alignItems: "center",
-    backgroundColor: "#FFD7D4",
+    backgroundColor: colors.errorBg,
     padding: spacing.md,
     borderRadius: radius.md,
     marginBottom: spacing.md,

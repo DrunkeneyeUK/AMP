@@ -13,9 +13,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 
-import { colors, spacing, radius, typography, shadows } from "@/src/constants/theme";
+import { spacing, radius, typography, shadows } from "@/src/constants/theme";
 import { useAuth } from "@/src/auth/AuthContext";
 import { api, UserInfo } from "@/src/lib/api";
+import { useTheme, ThemeMode } from "@/src/theme/ThemeContext";
+import { useThemedStyles } from "@/src/theme/useThemedStyles";
 
 const USER_COLORS = [
   "#FF6B5C", "#FF3B30", "#FF9500", "#FFCC00",
@@ -26,6 +28,8 @@ const USER_COLORS = [
 export default function SettingsScreen() {
   const router = useRouter();
   const { user, company, signOut, refresh } = useAuth();
+  const { colors, mode, setMode } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [members, setMembers] = useState<UserInfo[]>([]);
   const [savingColor, setSavingColor] = useState(false);
 
@@ -199,6 +203,40 @@ export default function SettingsScreen() {
           </View>
         )}
 
+        {/* Appearance / Theme */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Appearance</Text>
+          <View style={styles.card}>
+            <Text style={styles.cardSub}>Choose light or dark mode.</Text>
+            <View style={styles.themeRow}>
+              {(["light", "dark", "system"] as ThemeMode[]).map((m) => {
+                const active = mode === m;
+                const icon =
+                  m === "light" ? "sunny" : m === "dark" ? "moon" : "phone-portrait";
+                return (
+                  <Pressable
+                    key={m}
+                    onPress={() => setMode(m)}
+                    style={[styles.themeCard, active && styles.themeCardActive]}
+                    testID={`theme-${m}`}
+                  >
+                    <Ionicons
+                      name={icon as any}
+                      size={20}
+                      color={active ? "#fff" : colors.onSurface}
+                    />
+                    <Text
+                      style={[styles.themeLabel, active && styles.themeLabelActive]}
+                    >
+                      {m === "light" ? "Light" : m === "dark" ? "Dark" : "System"}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+
         {/* Sign out */}
         <View style={styles.section}>
           <Pressable style={styles.logoutBtn} onPress={onLogout} testID="logout-btn">
@@ -213,7 +251,7 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
   header: {
     paddingHorizontal: spacing.lg,
@@ -371,9 +409,24 @@ const styles = StyleSheet.create({
     gap: 6,
     padding: spacing.lg,
     borderRadius: radius.lg,
-    backgroundColor: "#FFD7D4",
+    backgroundColor: colors.errorBg,
   },
   logoutText: { color: colors.error, fontWeight: "800", fontSize: typography.base },
+  themeRow: { flexDirection: "row", gap: spacing.sm },
+  themeCard: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  themeCardActive: { backgroundColor: colors.surfaceInverse, borderColor: colors.surfaceInverse },
+  themeLabel: { fontWeight: "700", color: colors.onSurface, fontSize: typography.sm },
+  themeLabelActive: { color: colors.onSurfaceInverse },
   version: {
     textAlign: "center",
     color: colors.onSurfaceTertiary,

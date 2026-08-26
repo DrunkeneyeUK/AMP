@@ -16,7 +16,6 @@ import * as Haptics from "expo-haptics";
 import dayjs from "dayjs";
 
 import {
-  colors,
   spacing,
   radius,
   typography,
@@ -24,12 +23,18 @@ import {
   getCategoryMeta,
 } from "@/src/constants/theme";
 import { api, EventItem } from "@/src/lib/api";
+import { useAuth } from "@/src/auth/AuthContext";
+import { useTheme } from "@/src/theme/ThemeContext";
+import { useThemedStyles } from "@/src/theme/useThemedStyles";
 
 const AVATAR = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?crop=entropy&cs=srgb&fm=jpg&w=300&q=80";
 
 export default function EventDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { company } = useAuth();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [event, setEvent] = useState<EventItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -73,7 +78,7 @@ export default function EventDetailsScreen() {
     );
   }
 
-  const meta = getCategoryMeta(event.category);
+  const meta = getCategoryMeta(event.category, company?.categories);
 
   return (
     <View style={styles.root}>
@@ -156,6 +161,8 @@ function MetaBlock({
   title: string;
   value: string;
 }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.metaBlock}>
       <View style={styles.metaHeader}>
@@ -169,7 +176,7 @@ function MetaBlock({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
   header: {
     flexDirection: "row",
@@ -275,7 +282,7 @@ const styles = StyleSheet.create({
     gap: 6,
     height: 52,
     borderRadius: radius.pill,
-    backgroundColor: "#FFD7D4",
+    backgroundColor: colors.errorBg,
   },
   deleteText: { color: colors.error, fontWeight: "800", fontSize: typography.base },
 });

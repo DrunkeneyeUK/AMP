@@ -17,16 +17,20 @@ import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import dayjs from "dayjs";
 
-import { colors, spacing, radius, typography, shadows, getCategoryMeta } from "@/src/constants/theme";
+import { spacing, radius, typography, shadows, getCategoryMeta } from "@/src/constants/theme";
 import { api, EventItem, TaskItem } from "@/src/lib/api";
 import { formatTime, toISODate } from "@/src/lib/date";
 import { useAuth } from "@/src/auth/AuthContext";
+import { useTheme } from "@/src/theme/ThemeContext";
+import { useThemedStyles } from "@/src/theme/useThemedStyles";
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
 export default function TodayScreen() {
   const router = useRouter();
   const { user, company } = useAuth();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const brand = company?.brand_color ?? colors.brandPrimary;
   const [selectedDate, setSelectedDate] = useState<string>(toISODate(new Date()));
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -235,7 +239,10 @@ function greeting(): string {
 }
 
 function EventCard({ event, onPress }: { event: EventItem; onPress: () => void }) {
-  const meta = getCategoryMeta(event.category);
+  const { company } = useAuth();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
+  const meta = getCategoryMeta(event.category, company?.categories);
   const stripeColor = event.owner_color || meta.color;
   return (
     <Pressable
@@ -292,7 +299,10 @@ function TaskRow({
   onToggle: () => void;
   onPress: () => void;
 }) {
-  const meta = getCategoryMeta(task.category);
+  const { company } = useAuth();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
+  const meta = getCategoryMeta(task.category, company?.categories);
   const done = task.status === "done";
   return (
     <Pressable style={styles.taskRow} onPress={onPress} testID={`task-row-${task.id}`}>
@@ -332,6 +342,8 @@ function TaskRow({
 }
 
 function EmptyDay({ onCreate }: { onCreate: () => void }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.empty}>
       <Image
@@ -351,7 +363,7 @@ function EmptyDay({ onCreate }: { onCreate: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
   headerSafe: { backgroundColor: colors.surface },
   header: {

@@ -15,7 +15,6 @@ import * as Haptics from "expo-haptics";
 import dayjs from "dayjs";
 
 import {
-  colors,
   spacing,
   radius,
   typography,
@@ -24,6 +23,9 @@ import {
   PRIORITIES,
 } from "@/src/constants/theme";
 import { api, TaskItem } from "@/src/lib/api";
+import { useAuth } from "@/src/auth/AuthContext";
+import { useTheme } from "@/src/theme/ThemeContext";
+import { useThemedStyles } from "@/src/theme/useThemedStyles";
 
 const STATUS_CYCLE: Record<TaskItem["status"], TaskItem["status"]> = {
   todo: "in_progress",
@@ -40,6 +42,9 @@ const STATUS_LABEL: Record<TaskItem["status"], string> = {
 export default function TaskDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { company } = useAuth();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [task, setTask] = useState<TaskItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -95,7 +100,7 @@ export default function TaskDetailsScreen() {
     );
   }
 
-  const meta = getCategoryMeta(task.category);
+  const meta = getCategoryMeta(task.category, company?.categories);
   const p = PRIORITIES.find((x) => x.key === task.priority) ?? PRIORITIES[1];
   const done = task.status === "done";
 
@@ -197,7 +202,7 @@ export default function TaskDetailsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
   header: {
     flexDirection: "row",
@@ -308,7 +313,7 @@ const styles = StyleSheet.create({
     gap: 6,
     height: 52,
     borderRadius: radius.pill,
-    backgroundColor: "#FFD7D4",
+    backgroundColor: colors.errorBg,
   },
   deleteText: { color: colors.error, fontWeight: "800", fontSize: typography.base },
 });

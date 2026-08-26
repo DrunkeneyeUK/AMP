@@ -18,9 +18,11 @@ import * as ImagePicker from "expo-image-picker";
 import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 
-import { colors, spacing, radius, typography, shadows } from "@/src/constants/theme";
+import { spacing, radius, typography, shadows, CategoryDef } from "@/src/constants/theme";
 import { useAuth } from "@/src/auth/AuthContext";
 import { api, UserInfo } from "@/src/lib/api";
+import { useTheme } from "@/src/theme/ThemeContext";
+import { useThemedStyles } from "@/src/theme/useThemedStyles";
 
 const BRAND_COLORS = [
   "#FF6B5C", "#FF3B30", "#FF9500", "#FFCC00",
@@ -31,6 +33,8 @@ const BRAND_COLORS = [
 export default function AdminScreen() {
   const router = useRouter();
   const { user, company, refreshCompany } = useAuth();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [companyName, setCompanyName] = useState(company?.name ?? "");
   const [brandColor, setBrandColor] = useState(company?.brand_color ?? "#FF6B5C");
   const [visibility, setVisibility] = useState<"shared" | "private">(
@@ -44,6 +48,13 @@ export default function AdminScreen() {
   const [rotating, setRotating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+
+  // Categories
+  const [categories, setCategories] = useState<CategoryDef[]>(company?.categories ?? []);
+  const [editingCat, setEditingCat] = useState<CategoryDef | null>(null);
+  const [showNewCat, setShowNewCat] = useState(false);
+  const [newCatLabel, setNewCatLabel] = useState("");
+  const [newCatColor, setNewCatColor] = useState("#FF6B5C");
 
   useEffect(() => {
     (async () => {
@@ -60,6 +71,12 @@ export default function AdminScreen() {
       try {
         const users = await api.listUsers();
         setMembers(users);
+      } catch (e) {
+        console.warn(e);
+      }
+      try {
+        const cats = await api.listCategories();
+        setCategories(cats);
       } catch (e) {
         console.warn(e);
       }
@@ -140,6 +157,49 @@ export default function AdminScreen() {
   const copy = async (t: string) => {
     Haptics.selectionAsync();
     await Clipboard.setStringAsync(t);
+  };
+
+  // Category CRUD
+  const addCategory = async () => {
+    if (!newCatLabel.trim()) return;
+    try {
+      const cat = await api.createCategory({ label: newCatLabel.trim(), color: newCatColor });
+      setCategories((prev) => [...prev, cat]);
+      setNewCatLabel("");
+      setNewCatColor("#FF6B5C");
+      setShowNewCat(false);
+      await refreshCompany();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e: any) {
+      setError(e?.message || "Add failed");
+    }
+  };
+
+  const saveEditingCat = async () => {
+    if (!editingCat) return;
+    try {
+      const updated = await api.updateCategory(editingCat.key, {
+        label: editingCat.label,
+        color: editingCat.color,
+      });
+      setCategories((prev) => prev.map((c) => (c.key === updated.key ? updated : c)));
+      setEditingCat(null);
+      await refreshCompany();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e: any) {
+      setError(e?.message || "Save failed");
+    }
+  };
+
+  const deleteCategory = async (key: string) => {
+    try {
+      await api.deleteCategory(key);
+      setCategories((prev) => prev.filter((c) => c.key !== key));
+      await refreshCompany();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e: any) {
+      setError(e?.message || "Delete failed");
+    }
   };
 
   if (user?.role !== "admin") {
@@ -313,6 +373,134 @@ export default function AdminScreen() {
             </Pressable>
           </View>
 
+          {/* Categories / Event types */}
+          <Text style={[styles.section, { marginTop: spacing.xl }]}>Event types</Text>
+          <View style={styles.card}>
+            {categories.map((cat, i) => {
+              const isEditing = editingCat?.key === cat.key;
+              return (
+                <View
+                  key={cat.key}
+                  style={[
+                    styles.catRow,
+                    i > 0 && { borderTopWidth: 1, borderTopColor: colors.divider },
+                  ]}
+                >
+                  {isEditing ? (
+                    <>
+                      <Pressable
+                        onPress={() => {
+                          const idx = CAT_COLORS.indexOf(editingCat!.color);
+                          const next = CAT_COLORS[(idx + 1) % CAT_COLORS.length];
+                          setEditingCat({ ...editingCat!, color: next });
+                        }}
+                        style={[styles.catSwatch, { backgroundColor: editingCat!.color }]}
+                        testID={`cat-edit-color-${cat.key}`}
+                      >
+                        <Ionicons name="color-palette" size={14} color="#fff" />
+                      </Pressable>
+                      <TextInput
+                        value={editingCat!.label}
+                        onChangeText={(t) => setEditingCat({ ...editingCat!, label: t })}
+                        style={styles.catInput}
+                        autoFocus
+                        testID={`cat-edit-label-${cat.key}`}
+                      />
+                      <Pressable onPress={saveEditingCat} style={styles.catAction} testID={`cat-save-${cat.key}`}>
+                        <Ionicons name="checkmark" size={18} color={colors.success} />
+                      </Pressable>
+                      <Pressable
+                        onPress={() => setEditingCat(null)}
+                        style={styles.catAction}
+                      >
+                        <Ionicons name="close" size={18} color={colors.onSurfaceSecondary} />
+                      </Pressable>
+                    </>
+                  ) : (
+                    <>
+                      <View style={[styles.catSwatch, { backgroundColor: cat.color }]} />
+                      <Text style={styles.catLabel} numberOfLines={1}>
+                        {cat.label}
+                      </Text>
+                      <Pressable
+                        onPress={() => setEditingCat({ ...cat })}
+                        style={styles.catAction}
+                        testID={`cat-edit-${cat.key}`}
+                      >
+                        <Ionicons name="pencil" size={16} color={colors.onSurfaceSecondary} />
+                      </Pressable>
+                      <Pressable
+                        onPress={() => deleteCategory(cat.key)}
+                        style={styles.catAction}
+                        disabled={categories.length <= 1}
+                        testID={`cat-delete-${cat.key}`}
+                      >
+                        <Ionicons
+                          name="trash-outline"
+                          size={16}
+                          color={categories.length <= 1 ? colors.onSurfaceTertiary : colors.error}
+                        />
+                      </Pressable>
+                    </>
+                  )}
+                </View>
+              );
+            })}
+            {showNewCat ? (
+              <View
+                style={[
+                  styles.catRow,
+                  { borderTopWidth: 1, borderTopColor: colors.divider },
+                ]}
+              >
+                <Pressable
+                  onPress={() => {
+                    const idx = CAT_COLORS.indexOf(newCatColor);
+                    const next = CAT_COLORS[(idx + 1) % CAT_COLORS.length];
+                    setNewCatColor(next);
+                  }}
+                  style={[styles.catSwatch, { backgroundColor: newCatColor }]}
+                >
+                  <Ionicons name="color-palette" size={14} color="#fff" />
+                </Pressable>
+                <TextInput
+                  value={newCatLabel}
+                  onChangeText={setNewCatLabel}
+                  placeholder="e.g. Client Work"
+                  placeholderTextColor={colors.onSurfaceTertiary}
+                  style={styles.catInput}
+                  autoFocus
+                  testID="cat-new-label"
+                />
+                <Pressable onPress={addCategory} style={styles.catAction} testID="cat-new-save">
+                  <Ionicons name="checkmark" size={18} color={colors.success} />
+                </Pressable>
+                <Pressable onPress={() => setShowNewCat(false)} style={styles.catAction}>
+                  <Ionicons name="close" size={18} color={colors.onSurfaceSecondary} />
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => setShowNewCat(true)}
+                style={[
+                  styles.catRow,
+                  {
+                    borderTopWidth: 1,
+                    borderTopColor: colors.divider,
+                    justifyContent: "center",
+                    gap: 6,
+                  },
+                ]}
+                testID="cat-new"
+              >
+                <Ionicons name="add" size={16} color={colors.brandPrimary} />
+                <Text style={{ color: colors.brandPrimary, fontWeight: "700" }}>
+                  Add event type
+                </Text>
+              </Pressable>
+            )}
+          </View>
+
           {/* Members */}
           <Text style={[styles.section, { marginTop: spacing.xl }]}>
             Team members ({members.length})
@@ -348,7 +536,13 @@ export default function AdminScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const CAT_COLORS = [
+  "#FF6B5C", "#FF3B30", "#FF9500", "#FFCC00", "#34C759",
+  "#00C7BE", "#32ADE6", "#5856D6", "#AF52DE", "#FF2D55",
+  "#1C1B1A", "#8E8E93",
+];
+
+const makeStyles = (colors: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
   header: {
     flexDirection: "row",
@@ -472,12 +666,43 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 6,
     alignItems: "center",
-    backgroundColor: "#FFD7D4",
+    backgroundColor: colors.errorBg,
     padding: spacing.md,
     borderRadius: radius.md,
     marginTop: spacing.md,
   },
   errorText: { color: colors.error, fontWeight: "600", flex: 1 },
+  catRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  catSwatch: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  catLabel: { flex: 1, fontSize: typography.base, fontWeight: "600", color: colors.onSurface },
+  catInput: {
+    flex: 1,
+    fontSize: typography.base,
+    fontWeight: "600",
+    color: colors.onSurface,
+    paddingVertical: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  catAction: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   inviteBox: {
     backgroundColor: colors.brandTertiary,
     borderRadius: radius.md,

@@ -17,29 +17,35 @@ import * as Haptics from "expo-haptics";
 import dayjs from "dayjs";
 
 import {
-  colors,
   spacing,
   radius,
   typography,
   shadows,
-  CATEGORIES,
+  DEFAULT_CATEGORIES,
   PRIORITIES,
 } from "@/src/constants/theme";
 import { api } from "@/src/lib/api";
+import { useAuth } from "@/src/auth/AuthContext";
+import { useTheme } from "@/src/theme/ThemeContext";
+import { useThemedStyles } from "@/src/theme/useThemedStyles";
 
 type Mode = "event" | "task";
 
 export default function CreateScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ date?: string; type?: string }>();
+  const { company } = useAuth();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const initialType = (params.type as Mode) === "task" ? "task" : "event";
+  const categories = company?.categories?.length ? company.categories : DEFAULT_CATEGORIES;
 
   const [mode, setMode] = useState<Mode>(initialType);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
   const [assignee, setAssignee] = useState("");
-  const [category, setCategory] = useState("work");
+  const [category, setCategory] = useState(categories[0].key);
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
   const [saving, setSaving] = useState(false);
 
@@ -74,7 +80,7 @@ export default function CreateScreen() {
           location,
           assignee,
           category,
-          color: CATEGORIES.find((c) => c.key === category)?.color ?? "#FF6B5C",
+          color: categories.find((c) => c.key === category)?.color ?? "#FF6B5C",
         });
       } else {
         await api.createTask({
@@ -177,7 +183,7 @@ export default function CreateScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.chipRow}
             >
-              {CATEGORIES.map((c) => {
+              {categories.map((c) => {
                 const active = category === c.key;
                 return (
                   <Pressable
@@ -341,6 +347,7 @@ function Field({
   label: string;
   children: React.ReactNode;
 }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -360,6 +367,7 @@ function TimePicker({
   onChange: (iso: string) => void;
   baseDate: dayjs.Dayjs;
 }) {
+  const styles = useThemedStyles(makeStyles);
   const currentHour = dayjs(value).hour();
   return (
     <ScrollView
@@ -391,7 +399,7 @@ function TimePicker({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
   header: {
     flexDirection: "row",

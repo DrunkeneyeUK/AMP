@@ -154,6 +154,18 @@ class UpdateUserRequest(BaseModel):
     color: Optional[str] = None
 
 
+class CategoryCreate(BaseModel):
+    label: str = Field(min_length=1, max_length=40)
+    color: str = Field(min_length=4, max_length=9)  # hex
+    bg: Optional[str] = None
+
+
+class CategoryUpdate(BaseModel):
+    label: Optional[str] = None
+    color: Optional[str] = None
+    bg: Optional[str] = None
+
+
 class EventCreate(BaseModel):
     title: str
     description: Optional[str] = ""
@@ -205,6 +217,30 @@ DEFAULT_USER_COLORS = [
     "#FF3B30", "#5AC8FA", "#FFCC00", "#FF9500", "#4CD964",
 ]
 
+DEFAULT_CATEGORIES = [
+    {"key": "work", "label": "Work", "color": "#FF6B5C", "bg": "#FFDED9"},
+    {"key": "meeting", "label": "Meeting", "color": "#32ADE6", "bg": "#D6EEFA"},
+    {"key": "deadline", "label": "Deadline", "color": "#FF453A", "bg": "#FFD7D4"},
+    {"key": "personal", "label": "Personal", "color": "#34C759", "bg": "#D6F5DE"},
+    {"key": "focus", "label": "Focus", "color": "#FFB340", "bg": "#FFEBCC"},
+]
+
+
+def _hex_to_bg(hex_color: str) -> str:
+    """Return a light tint of the given hex color to use as chip background."""
+    h = hex_color.lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    try:
+        r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    except Exception:
+        return "#F2EFEB"
+    # blend 85% white
+    r = int(r * 0.15 + 255 * 0.85)
+    g = int(g * 0.15 + 255 * 0.85)
+    b = int(b * 0.15 + 255 * 0.85)
+    return f"#{r:02X}{g:02X}{b:02X}"
+
 
 def hash_password(pw: str) -> str:
     return pwd_ctx.hash(pw)
@@ -249,6 +285,7 @@ def public_company(c: dict) -> dict:
         "logo_url": c.get("logo_url"),
         "brand_color": c.get("brand_color", "#FF6B5C"),
         "visibility_mode": c.get("visibility_mode", "shared"),
+        "categories": c.get("categories", DEFAULT_CATEGORIES),
     }
 
 
@@ -297,6 +334,7 @@ async def register_company(payload: RegisterCompanyRequest):
         "brand_color": "#FF6B5C",
         "visibility_mode": payload.visibility_mode if payload.visibility_mode in ("shared", "private") else "shared",
         "invite_code": invite_code,
+        "categories": [dict(c) for c in DEFAULT_CATEGORIES],
         "created_at": utcnow_iso(),
     }
     await db.companies.insert_one(company_doc)
@@ -412,6 +450,81 @@ async def rotate_invite(user: dict = Depends(require_admin)):
         {"id": user["company_id"]}, {"$set": {"invite_code": new_code}}
     )
     return {"invite_code": new_code}
+
+
+# --- Categories (event types) ---
+@api_router.get("/company/categories")
+async def list_categories(user: dict = Depends(get_current_user)):
+    company = await db.companies.find_one({"id": user["company_id"]}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    return company.get("categories", DEFAULT_CATEGORIES)
+
+
+@api_router.post("/company/categories")
+async def create_category(payload: CategoryCreate, user: dict = Depends(require_admin)):
+    company = await db.companies.find_one({"id": user["company_id"]}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    cats = list(company.get("categories") or DEFAULT_CATEGORIES)
+    # Generate a stable slug key from the label
+    base = "".join(c.lower() if c.isalnum() else "-" for c in payload.label).strip("-") or "category"
+    key = base
+    idx = 2
+    existing_keys = {c["key"] for c in cats}
+    while key in existing_keys:
+        key = f"{base}-{idx}"
+        idx += 1
+    new_cat = {
+        "key": key,
+        "label": payload.label.strip(),
+        "color": payload.color,
+        "bg": payload.bg or _hex_to_bg(payload.color),
+    }
+    cats.append(new_cat)
+    await db.companies.update_one({"id": user["company_id"]}, {"$set": {"categories": cats}})
+    return new_cat
+
+
+@api_router.patch("/company/categories/{key}")
+async def update_category(
+    key: str, payload: CategoryUpdate, user: dict = Depends(require_admin)
+):
+    company = await db.companies.find_one({"id": user["company_id"]}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    cats = list(company.get("categories") or DEFAULT_CATEGORIES)
+    for i, c in enumerate(cats):
+        if c["key"] == key:
+            if payload.label is not None:
+                cats[i]["label"] = payload.label.strip()
+            if payload.color is not None:
+                cats[i]["color"] = payload.color
+                # auto-refresh bg if not explicitly set
+                if payload.bg is None:
+                    cats[i]["bg"] = _hex_to_bg(payload.color)
+            if payload.bg is not None:
+                cats[i]["bg"] = payload.bg
+            await db.companies.update_one(
+                {"id": user["company_id"]}, {"$set": {"categories": cats}}
+            )
+            return cats[i]
+    raise HTTPException(status_code=404, detail="Category not found")
+
+
+@api_router.delete("/company/categories/{key}")
+async def delete_category(key: str, user: dict = Depends(require_admin)):
+    company = await db.companies.find_one({"id": user["company_id"]}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    cats = list(company.get("categories") or DEFAULT_CATEGORIES)
+    if len(cats) <= 1:
+        raise HTTPException(status_code=400, detail="At least one category is required")
+    new_cats = [c for c in cats if c["key"] != key]
+    if len(new_cats) == len(cats):
+        raise HTTPException(status_code=404, detail="Category not found")
+    await db.companies.update_one({"id": user["company_id"]}, {"$set": {"categories": new_cats}})
+    return {"ok": True}
 
 
 @api_router.post("/company/logo")

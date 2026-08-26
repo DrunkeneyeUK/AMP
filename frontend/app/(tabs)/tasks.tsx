@@ -16,7 +16,7 @@ import * as Haptics from "expo-haptics";
 import dayjs from "dayjs";
 
 import {
-  colors,
+  colors as _fallbackColors,
   spacing,
   radius,
   typography,
@@ -24,6 +24,9 @@ import {
   getCategoryMeta,
 } from "@/src/constants/theme";
 import { api, TaskItem } from "@/src/lib/api";
+import { useAuth } from "@/src/auth/AuthContext";
+import { useTheme } from "@/src/theme/ThemeContext";
+import { useThemedStyles } from "@/src/theme/useThemedStyles";
 
 const FILTERS = [
   { key: "all", label: "All" },
@@ -34,6 +37,9 @@ const FILTERS = [
 
 export default function TasksScreen() {
   const router = useRouter();
+  const { company } = useAuth();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -225,7 +231,10 @@ function TaskCard({
   onToggle: () => void;
   onPress: () => void;
 }) {
-  const meta = getCategoryMeta(task.category);
+  const { company } = useAuth();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
+  const meta = getCategoryMeta(task.category, company?.categories);
   const done = task.status === "done";
   const inProgress = task.status === "in_progress";
   return (
@@ -282,7 +291,7 @@ function TaskCard({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
   header: {
     paddingHorizontal: spacing.lg,
