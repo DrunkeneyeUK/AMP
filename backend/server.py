@@ -158,12 +158,14 @@ class CategoryCreate(BaseModel):
     label: str = Field(min_length=1, max_length=40)
     color: str = Field(min_length=4, max_length=9)  # hex
     bg: Optional[str] = None
+    icon: Optional[str] = "briefcase"
 
 
 class CategoryUpdate(BaseModel):
     label: Optional[str] = None
     color: Optional[str] = None
     bg: Optional[str] = None
+    icon: Optional[str] = None
 
 
 class EventCreate(BaseModel):
@@ -218,11 +220,11 @@ DEFAULT_USER_COLORS = [
 ]
 
 DEFAULT_CATEGORIES = [
-    {"key": "work", "label": "Work", "color": "#FF6B5C", "bg": "#FFDED9"},
-    {"key": "meeting", "label": "Meeting", "color": "#32ADE6", "bg": "#D6EEFA"},
-    {"key": "deadline", "label": "Deadline", "color": "#FF453A", "bg": "#FFD7D4"},
-    {"key": "personal", "label": "Personal", "color": "#34C759", "bg": "#D6F5DE"},
-    {"key": "focus", "label": "Focus", "color": "#FFB340", "bg": "#FFEBCC"},
+    {"key": "work", "label": "Work", "color": "#FF6B5C", "bg": "#FFDED9", "icon": "briefcase"},
+    {"key": "meeting", "label": "Meeting", "color": "#32ADE6", "bg": "#D6EEFA", "icon": "people"},
+    {"key": "deadline", "label": "Deadline", "color": "#FF453A", "bg": "#FFD7D4", "icon": "flag"},
+    {"key": "personal", "label": "Personal", "color": "#34C759", "bg": "#D6F5DE", "icon": "heart"},
+    {"key": "focus", "label": "Focus", "color": "#FFB340", "bg": "#FFEBCC", "icon": "bulb"},
 ]
 
 
@@ -278,14 +280,24 @@ def public_user(u: dict, company: dict | None = None) -> dict:
     }
 
 
+def _ensure_category_icons(cats: list) -> list:
+    """Backfill icon field on any legacy categories missing it."""
+    ICON_MAP = {"work": "briefcase", "meeting": "people", "deadline": "flag", "personal": "heart", "focus": "bulb"}
+    return [
+        {**c, "icon": c.get("icon") or ICON_MAP.get(c.get("key", ""), "briefcase")}
+        for c in cats
+    ]
+
+
 def public_company(c: dict) -> dict:
+    cats = c.get("categories") or DEFAULT_CATEGORIES
     return {
         "id": c["id"],
         "name": c["name"],
         "logo_url": c.get("logo_url"),
         "brand_color": c.get("brand_color", "#FF6B5C"),
         "visibility_mode": c.get("visibility_mode", "shared"),
-        "categories": c.get("categories", DEFAULT_CATEGORIES),
+        "categories": _ensure_category_icons(cats),
     }
 
 
@@ -458,7 +470,7 @@ async def list_categories(user: dict = Depends(get_current_user)):
     company = await db.companies.find_one({"id": user["company_id"]}, {"_id": 0})
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
-    return company.get("categories", DEFAULT_CATEGORIES)
+    return _ensure_category_icons(company.get("categories") or DEFAULT_CATEGORIES)
 
 
 @api_router.post("/company/categories")
@@ -480,6 +492,7 @@ async def create_category(payload: CategoryCreate, user: dict = Depends(require_
         "label": payload.label.strip(),
         "color": payload.color,
         "bg": payload.bg or _hex_to_bg(payload.color),
+        "icon": payload.icon or "briefcase",
     }
     cats.append(new_cat)
     await db.companies.update_one({"id": user["company_id"]}, {"$set": {"categories": cats}})
@@ -505,6 +518,8 @@ async def update_category(
                     cats[i]["bg"] = _hex_to_bg(payload.color)
             if payload.bg is not None:
                 cats[i]["bg"] = payload.bg
+            if payload.icon is not None:
+                cats[i]["icon"] = payload.icon
             await db.companies.update_one(
                 {"id": user["company_id"]}, {"$set": {"categories": cats}}
             )

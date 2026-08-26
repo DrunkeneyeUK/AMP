@@ -257,6 +257,7 @@ function EventCard({ event, onPress }: { event: EventItem; onPress: () => void }
             {formatTime(event.start)} → {formatTime(event.end)}
           </Text>
           <View style={[styles.chip, { backgroundColor: meta.bg }]}>
+            <Ionicons name={(meta.icon || "briefcase") as any} size={11} color={meta.color} />
             <Text style={[styles.chipText, { color: meta.color }]}>
               {meta.label}
             </Text>
@@ -322,7 +323,7 @@ function TaskRow({
           {task.title}
         </Text>
         <View style={styles.metaRow}>
-          <View style={[styles.dotSm, { backgroundColor: meta.color }]} />
+          <Ionicons name={(meta.icon || "briefcase") as any} size={12} color={meta.color} />
           <Text style={styles.metaText}>{meta.label}</Text>
           {task.due_date && (
             <>
@@ -490,6 +491,9 @@ const makeStyles = (colors: any) => StyleSheet.create({
     letterSpacing: 0.3,
   },
   chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     paddingHorizontal: spacing.md,
     paddingVertical: 4,
     borderRadius: radius.pill,

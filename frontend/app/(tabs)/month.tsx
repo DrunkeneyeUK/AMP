@@ -235,6 +235,11 @@ export default function MonthScreen() {
                             {formatTime(e.start)} · {m.label}
                           </Text>
                         </View>
+                        <Ionicons
+                          name={(m.icon || "briefcase") as any}
+                          size={16}
+                          color={m.color}
+                        />
                       </Pressable>
                     );
                   })}

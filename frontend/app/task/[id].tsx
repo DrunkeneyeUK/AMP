@@ -118,7 +118,7 @@ export default function TaskDetailsScreen() {
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.chipsWrap}>
           <View style={[styles.chip, { backgroundColor: meta.bg }]}>
-            <View style={[styles.dot, { backgroundColor: meta.color }]} />
+            <Ionicons name={(meta.icon || "briefcase") as any} size={12} color={meta.color} />
             <Text style={[styles.chipText, { color: meta.color }]}>{meta.label}</Text>
           </View>
           <View style={[styles.chip, { backgroundColor: colors.surfaceSecondary }]}>

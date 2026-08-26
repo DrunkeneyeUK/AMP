@@ -141,15 +141,29 @@ export type CategoryDef = {
   label: string;
   color: string;
   bg: string;
+  icon?: string;
 };
 
 // Fallback defaults; the real list comes from the company config.
 export const DEFAULT_CATEGORIES: CategoryDef[] = [
-  { key: "work", label: "Work", color: "#FF6B5C", bg: "#FFDED9" },
-  { key: "meeting", label: "Meeting", color: "#32ADE6", bg: "#D6EEFA" },
-  { key: "deadline", label: "Deadline", color: "#FF453A", bg: "#FFD7D4" },
-  { key: "personal", label: "Personal", color: "#34C759", bg: "#D6F5DE" },
-  { key: "focus", label: "Focus", color: "#FFB340", bg: "#FFEBCC" },
+  { key: "work", label: "Work", color: "#FF6B5C", bg: "#FFDED9", icon: "briefcase" },
+  { key: "meeting", label: "Meeting", color: "#32ADE6", bg: "#D6EEFA", icon: "people" },
+  { key: "deadline", label: "Deadline", color: "#FF453A", bg: "#FFD7D4", icon: "flag" },
+  { key: "personal", label: "Personal", color: "#34C759", bg: "#D6F5DE", icon: "heart" },
+  { key: "focus", label: "Focus", color: "#FFB340", bg: "#FFEBCC", icon: "bulb" },
+];
+
+// Icons available for the admin category picker
+export const CATEGORY_ICONS = [
+  "briefcase", "people", "flag", "heart", "bulb",
+  "calendar", "alarm", "star", "home", "business",
+  "chatbubbles", "call", "mail", "megaphone", "shield-checkmark",
+  "code-slash", "hammer", "cash", "cart", "gift",
+  "book", "school", "cafe", "restaurant", "fitness",
+  "airplane", "car", "bicycle", "boat", "walk",
+  "musical-notes", "camera", "film", "game-controller", "trophy",
+  "medkit", "bed", "leaf", "flame", "flash",
+  "rocket", "trending-up", "pie-chart", "wallet", "receipt",
 ];
 
 // Legacy: kept so old imports don't crash. Prefer useCategories() from AuthContext.

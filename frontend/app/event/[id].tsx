@@ -97,6 +97,7 @@ export default function EventDetailsScreen() {
       <ScrollView contentContainerStyle={styles.body}>
         <View style={[styles.hero, { backgroundColor: meta.bg }]}>
           <View style={[styles.categoryChip, { backgroundColor: meta.color }]}>
+            <Ionicons name={(meta.icon || "briefcase") as any} size={12} color="#fff" />
             <Text style={styles.categoryChipText}>{meta.label}</Text>
           </View>
           <Text style={[styles.title, { color: colors.onSurface }]}>{event.title}</Text>
@@ -203,6 +204,9 @@ const makeStyles = (colors: any) => StyleSheet.create({
   },
   categoryChip: {
     alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     paddingHorizontal: spacing.md,
     paddingVertical: 4,
     borderRadius: radius.pill,

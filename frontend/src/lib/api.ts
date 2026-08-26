@@ -44,6 +44,7 @@ export type CategoryDef = {
   label: string;
   color: string;
   bg: string;
+  icon?: string;
 };
 
 export type CompanyInfo = {
@@ -136,7 +137,7 @@ export const api = {
 
   // Categories
   listCategories: () => req<CategoryDef[]>("/company/categories"),
-  createCategory: (body: { label: string; color: string; bg?: string }) =>
+  createCategory: (body: { label: string; color: string; bg?: string; icon?: string }) =>
     req<CategoryDef>("/company/categories", {
       method: "POST",
       body: JSON.stringify(body),

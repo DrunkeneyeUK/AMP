@@ -198,13 +198,10 @@ export default function CreateScreen() {
                     ]}
                     testID={`cat-${c.key}`}
                   >
-                    <View
-                      style={[
-                        styles.catDot,
-                        {
-                          backgroundColor: active ? "#fff" : c.color,
-                        },
-                      ]}
+                    <Ionicons
+                      name={(c.icon || "briefcase") as any}
+                      size={14}
+                      color={active ? "#fff" : c.color}
                     />
                     <Text
                       style={[

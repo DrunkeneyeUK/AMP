@@ -259,7 +259,7 @@ function TaskCard({
           {task.title}
         </Text>
         <View style={styles.metaRow}>
-          <View style={[styles.dotSm, { backgroundColor: meta.color }]} />
+          <Ionicons name={(meta.icon || "briefcase") as any} size={12} color={meta.color} />
           <Text style={styles.metaText}>{meta.label}</Text>
           {task.due_date && (
             <>

@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -18,7 +19,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 
-import { spacing, radius, typography, shadows, CategoryDef } from "@/src/constants/theme";
+import { spacing, radius, typography, shadows, CategoryDef, CATEGORY_ICONS } from "@/src/constants/theme";
 import { useAuth } from "@/src/auth/AuthContext";
 import { api, UserInfo } from "@/src/lib/api";
 import { useTheme } from "@/src/theme/ThemeContext";
@@ -55,6 +56,8 @@ export default function AdminScreen() {
   const [showNewCat, setShowNewCat] = useState(false);
   const [newCatLabel, setNewCatLabel] = useState("");
   const [newCatColor, setNewCatColor] = useState("#FF6B5C");
+  const [newCatIcon, setNewCatIcon] = useState("briefcase");
+  const [iconPickerFor, setIconPickerFor] = useState<"new" | string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -163,10 +166,15 @@ export default function AdminScreen() {
   const addCategory = async () => {
     if (!newCatLabel.trim()) return;
     try {
-      const cat = await api.createCategory({ label: newCatLabel.trim(), color: newCatColor });
+      const cat = await api.createCategory({
+        label: newCatLabel.trim(),
+        color: newCatColor,
+        icon: newCatIcon,
+      } as any);
       setCategories((prev) => [...prev, cat]);
       setNewCatLabel("");
       setNewCatColor("#FF6B5C");
+      setNewCatIcon("briefcase");
       setShowNewCat(false);
       await refreshCompany();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -181,6 +189,7 @@ export default function AdminScreen() {
       const updated = await api.updateCategory(editingCat.key, {
         label: editingCat.label,
         color: editingCat.color,
+        icon: editingCat.icon,
       });
       setCategories((prev) => prev.map((c) => (c.key === updated.key ? updated : c)));
       setEditingCat(null);
@@ -389,15 +398,26 @@ export default function AdminScreen() {
                   {isEditing ? (
                     <>
                       <Pressable
+                        onPress={() => setIconPickerFor(cat.key)}
+                        style={[styles.catSwatch, { backgroundColor: editingCat!.color }]}
+                        testID={`cat-edit-icon-${cat.key}`}
+                      >
+                        <Ionicons
+                          name={(editingCat!.icon || "briefcase") as any}
+                          size={14}
+                          color="#fff"
+                        />
+                      </Pressable>
+                      <Pressable
                         onPress={() => {
                           const idx = CAT_COLORS.indexOf(editingCat!.color);
                           const next = CAT_COLORS[(idx + 1) % CAT_COLORS.length];
                           setEditingCat({ ...editingCat!, color: next });
                         }}
-                        style={[styles.catSwatch, { backgroundColor: editingCat!.color }]}
+                        style={styles.catAction}
                         testID={`cat-edit-color-${cat.key}`}
                       >
-                        <Ionicons name="color-palette" size={14} color="#fff" />
+                        <Ionicons name="color-palette-outline" size={16} color={colors.onSurface} />
                       </Pressable>
                       <TextInput
                         value={editingCat!.label}
@@ -418,7 +438,13 @@ export default function AdminScreen() {
                     </>
                   ) : (
                     <>
-                      <View style={[styles.catSwatch, { backgroundColor: cat.color }]} />
+                      <View style={[styles.catSwatch, { backgroundColor: cat.color }]}>
+                        <Ionicons
+                          name={(cat.icon || "briefcase") as any}
+                          size={14}
+                          color="#fff"
+                        />
+                      </View>
                       <Text style={styles.catLabel} numberOfLines={1}>
                         {cat.label}
                       </Text>
@@ -454,14 +480,26 @@ export default function AdminScreen() {
                 ]}
               >
                 <Pressable
+                  onPress={() => setIconPickerFor("new")}
+                  style={[styles.catSwatch, { backgroundColor: newCatColor }]}
+                  testID="cat-new-icon"
+                >
+                  <Ionicons
+                    name={(newCatIcon || "briefcase") as any}
+                    size={14}
+                    color="#fff"
+                  />
+                </Pressable>
+                <Pressable
                   onPress={() => {
                     const idx = CAT_COLORS.indexOf(newCatColor);
                     const next = CAT_COLORS[(idx + 1) % CAT_COLORS.length];
                     setNewCatColor(next);
                   }}
-                  style={[styles.catSwatch, { backgroundColor: newCatColor }]}
+                  style={styles.catAction}
+                  testID="cat-new-color"
                 >
-                  <Ionicons name="color-palette" size={14} color="#fff" />
+                  <Ionicons name="color-palette-outline" size={16} color={colors.onSurface} />
                 </Pressable>
                 <TextInput
                   value={newCatLabel}
@@ -532,6 +570,65 @@ export default function AdminScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Icon picker modal */}
+      <Modal
+        transparent
+        visible={iconPickerFor !== null}
+        animationType="fade"
+        onRequestClose={() => setIconPickerFor(null)}
+      >
+        <Pressable
+          style={styles.iconBackdrop}
+          onPress={() => setIconPickerFor(null)}
+        >
+          <Pressable style={styles.iconSheet} onPress={() => {}}>
+            <View style={styles.iconSheetHeader}>
+              <Text style={styles.iconSheetTitle}>Choose an icon</Text>
+              <Pressable
+                onPress={() => setIconPickerFor(null)}
+                style={styles.iconCloseBtn}
+              >
+                <Ionicons name="close" size={18} color={colors.onSurface} />
+              </Pressable>
+            </View>
+            <ScrollView contentContainerStyle={styles.iconGrid}>
+              {CATEGORY_ICONS.map((ic) => {
+                const isNew = iconPickerFor === "new";
+                const currentIcon = isNew
+                  ? newCatIcon
+                  : editingCat?.icon || "briefcase";
+                const currentColor = isNew
+                  ? newCatColor
+                  : editingCat?.color || "#FF6B5C";
+                const active = currentIcon === ic;
+                return (
+                  <Pressable
+                    key={ic}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      if (isNew) setNewCatIcon(ic);
+                      else if (editingCat) setEditingCat({ ...editingCat, icon: ic });
+                      setIconPickerFor(null);
+                    }}
+                    style={[
+                      styles.iconCell,
+                      active && { backgroundColor: currentColor, borderColor: currentColor },
+                    ]}
+                    testID={`icon-${ic}`}
+                  >
+                    <Ionicons
+                      name={ic as any}
+                      size={22}
+                      color={active ? "#fff" : colors.onSurface}
+                    />
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -702,6 +799,53 @@ const makeStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.surfaceSecondary,
     alignItems: "center",
     justifyContent: "center",
+  },
+  iconBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    padding: spacing.lg,
+  },
+  iconSheet: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    maxHeight: "70%",
+  },
+  iconSheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.md,
+  },
+  iconSheetTitle: {
+    fontSize: typography.lg,
+    fontWeight: "800",
+    color: colors.onSurface,
+  },
+  iconCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    paddingBottom: spacing.md,
+  },
+  iconCell: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "transparent",
   },
   inviteBox: {
     backgroundColor: colors.brandTertiary,
