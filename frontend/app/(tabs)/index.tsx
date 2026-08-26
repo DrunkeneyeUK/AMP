@@ -20,11 +20,14 @@ import dayjs from "dayjs";
 import { colors, spacing, radius, typography, shadows, getCategoryMeta } from "@/src/constants/theme";
 import { api, EventItem, TaskItem } from "@/src/lib/api";
 import { formatTime, toISODate } from "@/src/lib/date";
+import { useAuth } from "@/src/auth/AuthContext";
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
 export default function TodayScreen() {
   const router = useRouter();
+  const { user, company } = useAuth();
+  const brand = company?.brand_color ?? colors.brandPrimary;
   const [selectedDate, setSelectedDate] = useState<string>(toISODate(new Date()));
   const [events, setEvents] = useState<EventItem[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -80,20 +83,37 @@ export default function TodayScreen() {
     <View style={styles.root}>
       <SafeAreaView edges={["top"]} style={styles.headerSafe}>
         <View style={styles.header}>
-          <View>
-            <Text style={styles.hello} testID="today-greeting">
-              {greeting()}
-            </Text>
-            <Text style={styles.title} testID="today-date-title">
-              {dayjs(selectedDate).format("dddd, MMM D")}
-            </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.md, flex: 1 }}>
+            {company?.logo_url ? (
+              <Image
+                source={{ uri: company.logo_url }}
+                style={[styles.brandLogo, { borderColor: brand }]}
+                contentFit="contain"
+              />
+            ) : (
+              <View style={[styles.brandLogo, { backgroundColor: brand, borderColor: brand, alignItems: "center", justifyContent: "center" }]}>
+                <Text style={{ color: "#fff", fontWeight: "800", fontSize: 16 }}>
+                  {(company?.name ?? "D").charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={styles.hello} testID="today-greeting">
+                {greeting()}, {user?.name?.split(" ")[0] ?? "there"}
+              </Text>
+              <Text style={styles.title} testID="today-date-title" numberOfLines={1}>
+                {dayjs(selectedDate).format("dddd, MMM D")}
+              </Text>
+            </View>
           </View>
           <Pressable
-            style={styles.iconBtn}
-            onPress={() => router.push("/settings" as any)}
+            style={[styles.iconBtn, { backgroundColor: user?.color ?? colors.surfaceSecondary }]}
+            onPress={() => router.push("/(tabs)/settings" as any)}
             testID="header-profile-btn"
           >
-            <Ionicons name="person-outline" size={20} color={colors.onSurface} />
+            <Text style={{ color: "#fff", fontWeight: "800" }}>
+              {(user?.name ?? "?").charAt(0).toUpperCase()}
+            </Text>
           </Pressable>
         </View>
 
@@ -116,7 +136,7 @@ export default function TodayScreen() {
                 }}
                 style={[
                   styles.dayCell,
-                  isSelected && styles.dayCellSelected,
+                  isSelected && { backgroundColor: brand },
                 ]}
                 testID={`date-cell-${iso}`}
               >
@@ -136,7 +156,7 @@ export default function TodayScreen() {
                 >
                   {d.date()}
                 </Text>
-                {isToday && !isSelected && <View style={styles.todayDot} />}
+                {isToday && !isSelected && <View style={[styles.todayDot, { backgroundColor: brand }]} />}
               </Pressable>
             );
           })}
@@ -216,13 +236,14 @@ function greeting(): string {
 
 function EventCard({ event, onPress }: { event: EventItem; onPress: () => void }) {
   const meta = getCategoryMeta(event.category);
+  const stripeColor = event.owner_color || meta.color;
   return (
     <Pressable
       style={styles.eventCard}
       onPress={onPress}
       testID={`event-card-${event.id}`}
     >
-      <View style={[styles.stripe, { backgroundColor: meta.color }]} />
+      <View style={[styles.stripe, { backgroundColor: stripeColor }]} />
       <View style={styles.eventBody}>
         <View style={styles.eventHeader}>
           <Text style={styles.eventTime}>
@@ -245,10 +266,16 @@ function EventCard({ event, onPress }: { event: EventItem; onPress: () => void }
             </Text>
           </View>
         )}
-        {!!event.assignee && (
+        {!!event.owner_name && (
           <View style={styles.metaRow}>
-            <Ionicons name="person-outline" size={14} color={colors.onSurfaceSecondary} />
-            <Text style={styles.metaText}>{event.assignee}</Text>
+            <View style={[styles.ownerDot, { backgroundColor: stripeColor }]} />
+            <Text style={styles.metaText}>{event.owner_name}</Text>
+            {!!event.assignee && (
+              <>
+                <Text style={styles.metaSep}>·</Text>
+                <Text style={styles.metaText}>→ {event.assignee}</Text>
+              </>
+            )}
           </View>
         )}
       </View>
@@ -355,6 +382,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  brandLogo: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    borderWidth: 2,
+    backgroundColor: colors.surface,
+    overflow: "hidden",
+  },
+  ownerDot: { width: 8, height: 8, borderRadius: 4 },
   dateTape: {
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,

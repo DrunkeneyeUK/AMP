@@ -1,0 +1,44 @@
+{
+  "summary": "Ran 21-test pytest suite for DaySync auth + multi-tenant isolation + visibility + logo (20/21 passed). Exercised full Expo web flow: welcome → admin register → profile → admin route → sign out → join screen → login. Two blocking bugs found: (1) Invite code screen never shows after admin registration (RouteGuard preempts setStep); (2) POST /api/company/logo returns a logo_url built from FastAPI request.base_url which resolves to the internal cluster URL (http://gpt-cross-platform.cluster-9.preview.emergentcf.cloud) instead of the public EXPO_PUBLIC_BACKEND_URL, so uploaded logos are 403 Forbidden when the client tries to display them.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/company/logo", "issue": "Returned logo_url uses request.base_url which resolves to internal cluster host (http://...cluster-9.preview.emergentcf.cloud) and is not reachable from the public domain (returns 403 via CF). Frontend cannot render the logo. Fix: build the URL from an env var (e.g. EXPO_PUBLIC_BACKEND_URL or a new PUBLIC_BASE_URL) instead of request.base_url in server.py upload_logo (line ~425).", "priority": "HIGH"}
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "register-admin.tsx / _layout.tsx RouteGuard", "issue": "After successful admin registration, setStep('invite') never renders. RouteGuard's useEffect sees user is authenticated + segments[0]=='(auth)' and calls router.replace('/(tabs)') immediately, unmounting the invite screen before it can display. Users never see their invite code. Fix options: (a) in RouteGuard, allow (auth) group to remain if a query/param like ?post=1 is set; (b) show the invite code as a modal from the (tabs) group after signup; or (c) defer setUser in AuthContext until the invite screen 'Continue' is tapped for signUpAdmin (persist token + set a local 'pendingUser' state, then commit on Continue).", "testID": "admin-continue (never rendered)", "priority": "CRITICAL"},
+      {"component": "settings.tsx (Profile screen)", "issue": "Sign out button (testID logout-btn) can be obscured by the bottom tab bar on shorter viewports — requires manual scroll to hit reliably. contentContainerStyle paddingBottom is 140 but the admin tile + team list can still push logout beyond visible area. Consider increasing paddingBottom or adding scrollIntoView / sticky footer.", "testID": "logout-btn", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Admin signup -> invite code", "issue": "End-to-end broken — admin cannot copy/share invite code from the post-signup screen because it never mounts. They must navigate to Profile → Admin settings to find the invite code, which is not the intended UX.", "affected_testIDs": ["admin-continue"]},
+      {"flow": "Logo display", "issue": "Upload succeeds but the returned URL is unreachable from the app (403). Displayed logo will always be broken until backend URL bug is fixed.", "affected_testIDs": ["upload-logo-btn"]}
+    ],
+    "design_issues": [
+      {"screen": "Global", "issues": ["Console deprecation warnings persist: 'shadow*' style props (use boxShadow), 'props.pointerEvents' (use style.pointerEvents). Non-blocking."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_daysync_auth.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Fix invite-code screen: prevent RouteGuard from redirecting admins away from /(auth)/register-admin before they tap Continue. Simplest fix: keep the invite screen alive by holding off on setUser in AuthContext for signUpAdmin (return token+user+invite to caller, persist token, but only setUser after Continue is pressed).",
+    "Fix POST /api/company/logo to construct logo_url from a public base URL env var (e.g. os.environ['PUBLIC_BASE_URL'] or the EXPO_PUBLIC_BACKEND_URL) instead of request.base_url.",
+    "Ensure Sign out button on Profile is always reachable without manual scroll (increase bottom padding or move to a sticky footer).",
+    "Silence deprecation warnings (shadow*, pointerEvents)."
+  ],
+  "critical_code_review_comments": [
+    "server.py upload_logo builds public URL from request.base_url — unreliable behind reverse proxies. Use env-configured base URL.",
+    "AuthContext.signUpAdmin persists user immediately, causing the (auth)-side invite screen to be preempted by RouteGuard. Decouple token persistence from user-state activation for the admin signup case.",
+    "server.py uses @app.on_event('startup'/'shutdown') — deprecated in newer FastAPI; migrate to lifespan handler.",
+    "server.py: All list/get endpoints correctly project out _id and password_hash. Good.",
+    "server.py: Multi-tenant isolation is enforced by filtering on company_id in every event/task query — verified good."
+  ],
+  "updated_files": ["/app/backend/tests/test_daysync_auth.py", "/app/memory/test_credentials.md"],
+  "success_rate": {"backend": "95% (20/21)", "frontend": "~75%"},
+  "seed_data_creation": "Tests create their own TEST_ prefixed companies+users each run; nothing persisted for reuse.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend auth+isolation+visibility all pass. Two critical bugs to retest after fix: (1) after admin signup, the invite code screen must render before hitting (tabs); look for testID 'admin-continue' and 'invite-code' text after clicking admin-submit. (2) after POST /api/company/logo, GET the returned logo_url and assert 200 image/* (currently returns 403 because URL uses internal cluster host). Join screen testIDs: join-code, join-name, join-email, join-password, join-submit. Profile-tab admin-nav testID is 'open-admin' (not 'profile-admin-link'). Header profile shortcut uses testID 'header-profile-btn' and routes to /settings.",
+  "rca_of_issue": "Invite-screen bug: signUpAdmin() calls persist(token, user) which sets user in AuthProvider. RouteGuard's useEffect on [user, segments] then fires and calls router.replace('/(tabs)') because segments[0]==='(auth)' and user is truthy. This unmounts register-admin.tsx before its setStep('invite') state can render. Reproduction: clear localStorage → /welcome → Create a company → fill form → Submit → observe URL becomes '/' (Today) with no invite screen and no 'admin-continue' testID. Fix: in signUpAdmin, do NOT set user until Continue is tapped; only persist the token and return {invite_code, tempUser}. Logo bug RCA: FastAPI's request.base_url reflects the direct upstream host (cluster-9 domain, HTTP), not the public Cloudflare-fronted domain. Fix by building URL from an env var. Both are simple, high-impact fixes."
+}

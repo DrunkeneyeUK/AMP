@@ -2,14 +2,18 @@ import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { View, StyleSheet, Platform } from "react-native";
 import { BlurView } from "expo-blur";
-import { colors, spacing } from "@/src/constants/theme";
+import { colors } from "@/src/constants/theme";
+import { useAuth } from "@/src/auth/AuthContext";
 
 export default function TabsLayout() {
+  const { company } = useAuth();
+  const brand = company?.brand_color ?? colors.brandPrimary;
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.brandPrimary,
+        tabBarActiveTintColor: brand,
         tabBarInactiveTintColor: colors.onSurfaceTertiary,
         tabBarLabelStyle: {
           fontSize: 11,
