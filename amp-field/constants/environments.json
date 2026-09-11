@@ -1,0 +1,38 @@
+{
+  "local": {
+    "label": "Local",
+    "appName": "AMP Field (Local)",
+    "scheme": "ampfield-local",
+    "bundleIdentifier": "uk.co.amplogic.ampfield.local",
+    "updateChannel": "local",
+    "showEnvironmentBadge": true,
+    "logLevel": "debug"
+  },
+  "development": {
+    "label": "Development",
+    "appName": "AMP Field (Dev)",
+    "scheme": "ampfield-dev",
+    "bundleIdentifier": "uk.co.amplogic.ampfield.dev",
+    "updateChannel": "development",
+    "showEnvironmentBadge": true,
+    "logLevel": "debug"
+  },
+  "staging": {
+    "label": "Beta",
+    "appName": "AMP Field (Beta)",
+    "scheme": "ampfield-beta",
+    "bundleIdentifier": "uk.co.amplogic.ampfield.beta",
+    "updateChannel": "staging",
+    "showEnvironmentBadge": true,
+    "logLevel": "info"
+  },
+  "production": {
+    "label": "Production",
+    "appName": "AMP Field",
+    "scheme": "ampfield",
+    "bundleIdentifier": "uk.co.amplogic.ampfield",
+    "updateChannel": "production",
+    "showEnvironmentBadge": false,
+    "logLevel": "warn"
+  }
+}

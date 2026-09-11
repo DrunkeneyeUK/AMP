@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: amp-field
+
+jobs:
+  verify:
+    name: Typecheck, lint and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: amp-field/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format
+
+      - name: Unit and integration tests
+        run: npm run test:ci
+
+      - name: Validate Expo configuration for every environment
+        run: npm run validate:config
+
+  bundle:
+    name: Bundle iOS and Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: amp-field/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Proves the app compiles end to end on both platforms. Uses placeholder
+      # public values: no real project secrets are needed to build a bundle,
+      # and none are available to pull requests from forks.
+      - name: Bundle for iOS and Android
+        env:
+          APP_ENV: development
+          EXPO_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY_CI || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiJ9.ci-placeholder-signature' }}
+        run: npx expo export --platform ios --platform android --output-dir dist
+
+      - name: Fail if a privileged Supabase key reached the bundle
+        run: npm run scan:bundle
